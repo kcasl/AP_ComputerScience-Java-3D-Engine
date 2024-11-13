@@ -6,6 +6,7 @@ import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL32;
 import org.lwjgl.system.CallbackI;
 import org.lwjgl.system.MemoryUtil;
 
@@ -20,7 +21,8 @@ public class WindowManager {
     private int width, height;
     private long window;
 
-    private boolean resize, vSync;
+    private boolean resize;
+    private boolean vSync;
 
     private final Matrix4f projectionMatrix;
 
@@ -33,18 +35,20 @@ public class WindowManager {
     }
 
     public void init() {
+
         GLFWErrorCallback.createPrint(System.err).set();
 
         if(!GLFW.glfwInit())
-            throw new IllegalStateException("GLFW 초기화 에러.");
+            throw new IllegalStateException("error on GLFW initialization");
 
         GLFW.glfwDefaultWindowHints();
-        GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GL11.GL_FALSE);
-        GLFW.glfwWindowHint(GLFW.GLFW_RESIZABLE, GL11.GL_TRUE);
+        GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GL32.GL_FALSE);
+        GLFW.glfwWindowHint(GLFW.GLFW_RESIZABLE, GL32.GL_TRUE);
         GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MAJOR, 3);
-        GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MAJOR, 2);
+        GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MINOR, 2);
         GLFW.glfwWindowHint(GLFW.GLFW_OPENGL_PROFILE, GLFW.GLFW_OPENGL_CORE_PROFILE);
-        GLFW.glfwWindowHint(GLFW.GLFW_OPENGL_FORWARD_COMPAT, GL11.GL_TRUE);
+
+        GLFW.glfwWindowHint(GLFW.GLFW_OPENGL_FORWARD_COMPAT, GL32.GL_TRUE);
 
         boolean maximised = false;
         if(width == 0 || height == 0) {
@@ -56,7 +60,7 @@ public class WindowManager {
 
         window = GLFW.glfwCreateWindow(width, height, title, MemoryUtil.NULL, MemoryUtil.NULL);
         if(window == MemoryUtil.NULL)
-            throw new RuntimeException("GLFW window 생성 실패.");
+            throw new RuntimeException("error on GLFW window create");
 
         GLFW.glfwSetFramebufferSizeCallback(window, (window, width, height) -> {
            this.width = width;
@@ -86,14 +90,41 @@ public class WindowManager {
 
         GL.createCapabilities();
 
-        GL11.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        GL11.glEnable(GL11.GL_DEPTH_TEST);
-        GL11.glEnable(GL11.GL_STENCIL_TEST);
-        GL11.glEnable(GL11.GL_CULL_FACE);
-        GL11.glEnable(GL11.GL_BACK);
+        GL32.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        GL32.glEnable(GL32.GL_DEPTH_TEST);
+        GL32.glEnable(GL32.GL_STENCIL_TEST);
+        GL32.glEnable(GL32.GL_CULL_FACE);
+        GL32.glCullFace(GL32.GL_BACK);
     }
 
+    public void update() {
+        GLFW.glfwSwapBuffers(window);
+        GLFW.glfwPollEvents();
+    }
 
+    public void cleanup() {
+        GLFW.glfwDestroyWindow(window);
+    }
+
+    public void setClearColour(float r, float g, float b, float a) {
+        GL32.glClearColor(r, g, b, a);
+    }
+
+    public boolean isKeyPressed(int keycode) {
+        return GLFW.glfwGetKey(window, keycode) == GLFW.GLFW_PRESS;
+    }
+
+    public boolean windowShouldClose() {
+        return GLFW.glfwWindowShouldClose(window);
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        GLFW.glfwSetWindowTitle(window, title);
+    }
 
     public boolean isResize() {
         return resize;
@@ -105,6 +136,32 @@ public class WindowManager {
 
     public void setResize(boolean resize) {
         this.resize = resize;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public long getWindow() {
+        return window;
+    }
+
+    public Matrix4f getProjectionMatrix() {
+        return projectionMatrix;
+    }
+
+    public Matrix4f updateProjectionMatrix() {
+        float aspectRatio = (float) width / height;
+        return projectionMatrix.setPerspective(FOV, aspectRatio, Z_NEAR, Z_FAR);
+    }
+
+    public Matrix4f updateProjectionMatrix(Matrix4f matrix, int width, int height) {
+        float aspectRatio = (float) width / height;
+        return matrix.setPerspective(FOV, aspectRatio, Z_NEAR, Z_FAR);
     }
 
 }
